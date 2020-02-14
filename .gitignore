@@ -1,2 +1,6 @@
 *.class
 *.log
+.cache-main
+.settings
+.worksheet
+/.metadata/

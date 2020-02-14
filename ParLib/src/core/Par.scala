@@ -39,16 +39,16 @@ object Par {
     map(mapped)(list => list.filter(x => x._2).map(x => x._1))
   }
   
-//  def aggregate[A,B](as: List[A], d: B)(f: (B,A) => B): Par[B] = {
-//    if (as.length == 0) unit(d)
-//    else if (as.length == 1) lazyUnit(f(d,as.head))
-//    else {
-//      val (l, r) = as.splitAt(as.length / 2)
-//      val lRes = aggregate(l, d)(f)
-//      val rRes = aggregate(r, d)(f)
-//      
-//    }
-//  }
+  def aggregate[A,B](as: List[A], d: B)(f: (B,A) => B)(g: (B,B) => B): Par[B] = as match {
+    case Nil => unit(d)
+    case h::Nil => lazyUnit(f(d, h))
+    case _ => {
+      val (l, r) = as.splitAt(as.length / 2)
+      val pl = fork(aggregate(l, d)(f)(g))
+      val pr = fork(aggregate(r, d)(f)(g))
+      map2(pl, pr)(g)
+    }
+  }
   
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
   
