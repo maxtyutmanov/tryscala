@@ -1,6 +1,6 @@
 *.class
 *.log
-.cache-main
+ParLib/.cache-main
 .settings
 .worksheet
 /.metadata/
