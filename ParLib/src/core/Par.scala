@@ -18,6 +18,11 @@ object Par {
   def map[A,B](pa: Par[A])(f: A => B): Par[B] =
     map2(pa, unit(()))((a, _) => f(a))
     
+  def map3[A,B,C,D](a: Par[A], b: Par[B], c: Par[C])(f: (A, B, C) => D): Par[D] = {
+    val ab = map2(a, b)((aval, bval) => (aval, bval))
+    map2(ab, c)((abval, cval) => f(abval._1, abval._2, cval))
+  }
+    
   def fork[A](a: => Par[A]): Par[A] = {
     (es: ExecutorService) => {
       es.submit(new Callable[A] {

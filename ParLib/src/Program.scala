@@ -4,7 +4,18 @@ import java.util.concurrent.Executors
 
 object Program {
   def main(args: Array[String]): Unit = {
-    testWordcount
+    testMap3
+  }
+  
+  def testMap3: Unit = {
+    val es = Executors.newWorkStealingPool();
+    
+    val (a, b, c) = (Par.unit(1), Par.unit(2), Par.unit(3))
+    
+    val resultPar = Par.map3(a, b, c)(_ + _ + _)
+    val result = resultPar(es).get()
+    
+    println(result);
   }
   
   def testWordcount: Unit = {
