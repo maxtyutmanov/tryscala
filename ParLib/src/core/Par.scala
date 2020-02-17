@@ -31,6 +31,9 @@ object Par {
     }
   }
   
+  def delay[A](fa: => Par[A]): Par[A] =
+    es => fa(es)
+  
   def sequence[A](ps: List[Par[A]]): Par[List[A]] =
     ps.foldRight(unit(Nil:List[A]))((a, acc) => map2(a, acc)((aVal, accVal) => aVal::accVal))
     

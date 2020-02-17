@@ -4,7 +4,21 @@ import java.util.concurrent.Executors
 
 object Program {
   def main(args: Array[String]): Unit = {
-    testMap3
+    testNonBlocking
+  }
+  
+  def testNonBlocking: Unit = {
+    val es = Executors.newWorkStealingPool();
+    val (a, b) = (corenb.Par.unit(1), corenb.Par.unit(2))
+    val resultPar = corenb.Par.map2(a, b)((_, _) => throw new Exception("BAD"))
+    
+    try {
+      val result = corenb.Par.run(es)(resultPar)
+      println(result)
+    }
+    catch {
+      case e: Exception => println("BAD")
+    }
   }
   
   def testMap3: Unit = {
