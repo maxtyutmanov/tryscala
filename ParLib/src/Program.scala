@@ -10,7 +10,7 @@ object Program {
   def testNonBlocking: Unit = {
     val es = Executors.newWorkStealingPool();
     val (a, b) = (corenb.Par.unit(1), corenb.Par.unit(2))
-    val resultPar = corenb.Par.map2(a, b)((_, _) => throw new Exception("BAD"))
+    val resultPar = corenb.Par.map2[Int, Int, Int](a, b)((_, _) => throw new Exception("BAD"))
     
     try {
       val result = corenb.Par.run(es)(resultPar)
