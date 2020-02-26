@@ -58,6 +58,21 @@ object Par {
     }
   }
   
+  def choice[A](c: Par[Boolean])(whenTrue: Par[A], whenFalse: Par[A]): Par[A] =
+    flatMap(c)(cval => if (cval) whenTrue else whenFalse) 
+  
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    flatMap(n)(nval => choices(nval))
+    
+  def flatMap[A,B](pa: Par[A])(f: A => Par[B]): Par[B] =
+    join(map(pa)(f))
+    
+  def join[A](a: Par[Par[A]]): Par[A] =
+    es => {
+      val pa = a(es).get
+      pa(es)
+    }
+  
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
   
   def asyncF[A,B](f: A => B): A => Par[B] =

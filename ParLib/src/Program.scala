@@ -4,7 +4,16 @@ import java.util.concurrent.Executors
 
 object Program {
   def main(args: Array[String]): Unit = {
-    testNonBlocking
+    testChoiceN
+  }
+  
+  def testChoiceN: Unit = {
+    val es = Executors.newWorkStealingPool();
+    val l = List(core.Par.unit(1), core.Par.unit(2), core.Par.unit(3))
+    val n = core.Par.fork(core.Par.unit(2))
+    
+    val chosen = core.Par.choiceN(n)(l)
+    println(chosen(es).get)
   }
   
   def testNonBlocking: Unit = {
