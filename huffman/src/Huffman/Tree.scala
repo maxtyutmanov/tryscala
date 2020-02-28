@@ -33,5 +33,6 @@ object Tree {
   private def mapPathInternal[A,B](t: Tree[A])(path: List[Turn])(f: (A, List[Turn]) => B) : Tree[B] = t match {
     case Branch(l, r) => Branch(mapPathInternal(l)(Left::path)(f), mapPathInternal(r)(Right::path)(f))
     case Leaf(x) => Leaf(f(x, path))
+    case Nil => Nil
   }
 }
