@@ -1,6 +1,8 @@
 import PropTesting.Gen
 import PropTesting.RNG
 import PropTesting.SimpleRNG
+import java.util.stream.IntStream
+import scala.collection.immutable.HashSet
 
 
 object Program {
@@ -40,5 +42,15 @@ object Program {
     println(s6)
     println(s7)
     println(s8)
+    
+    val alphabet = "abcdefghi"
+    val alphabetHs = HashSet(alphabet.toArray : _*)
+    
+    val prop = PropTesting.forAll(Gen.randStr(lenGen, "abcdefghi1"))(str => isMadeOfAlphabet(str, alphabetHs))
+    println(prop.run(100, rng16))
+  }
+  
+  def isMadeOfAlphabet(s: String, alphabet: HashSet[Char]): Boolean = {
+    s.foldLeft(true)((acc, c) => alphabet.contains(c) && acc)
   }
 }

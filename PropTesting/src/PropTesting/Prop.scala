@@ -1,16 +1,15 @@
 package PropTesting
 
-trait Prop {
-  def check: Either[(FailedCase, SuccessCount), SuccessCount]
+sealed trait Result {
+  def isFalsified: Boolean
 }
 
-//trait Prop {
-//  def check: Boolean
-//  
-//  def &&(other: Prop): Prop = {
-//    val self = this;
-//    new Prop {
-//      def check = this.check && other.check 
-//    }
-//  }
-//}
+case object Passed extends Result {
+  def isFalsified = false
+}
+
+case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
+  def isFalsified = true
+}
+
+case class Prop(run: (TestCases, RNG) => Result)
