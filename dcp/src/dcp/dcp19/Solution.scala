@@ -31,6 +31,17 @@ object Solution {
     println(result)
   }
   
+  def runSample2(): Unit = {
+    val mx = List(
+        List(100, 10000, 1),
+        List(10, 1000, 1),
+        List(100, 50, 1),
+        List(1, 10, 1)).map(column => mapWithIndex(column)((cost, ix) => ColorAndCost(ix, cost)))
+        
+    val result = solve(mx)
+    println(result)
+  }
+  
   def solve(cm: CostMatrix): Int = {
     val solutions = subSolve(cm)
     solutions.map(s => s.cost).min
@@ -45,7 +56,7 @@ object Solution {
       // Find possible solutions by joining current column's solutions to the rest of the matrix' solutions
       // enforcing the condition that two neighbor columns cannot have the same color
       val solutions = join(columnMins, restMins)((s1, s2) => s1.color != s2.color)
-        .map(x => x._1.merge(x._2))
+        .map(x => x._1 merge x._2)
       
       // get two most cost-effective solutions
       twoMinsByCost(solutions)
@@ -72,7 +83,7 @@ object Solution {
         // insert into sorted list by ascending
         case min1::min2::_ => {
           if (lt(a, min1)) List(a, min1) 
-          else if (lt(a, min2)) List(a, min2)
+          else if (lt(a, min2)) List(min1, a)
           else acc
         }
         case min::_ => {
