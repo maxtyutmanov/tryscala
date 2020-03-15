@@ -46,7 +46,7 @@ object Program {
     val alphabet = "abcdefghi"
     val alphabetHs = HashSet(alphabet.toArray : _*)
     
-    val prop = PropTesting.forAll(Gen.randStr(lenGen, "abcdefghi1"))(str => isMadeOfAlphabet(str, alphabetHs))
+    val prop = PropTesting.forAll(Gen.randStr(lenGen, "abcdefghi2"))(str => isMadeOfAlphabet(str, alphabetHs))
     println(prop.run(100, rng16))
   }
   
