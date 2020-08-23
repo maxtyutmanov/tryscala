@@ -47,52 +47,19 @@ object Solution {
     solutions.map(s => s.cost).min
   }
   
-  def subSolve(cm: CostMatrix): List[ColorAndCost] = cm match {
+  def subSolve(cm: CostMatrix): CostColumn = cm match {
     case Nil => Nil
-    case column::Nil => twoMinsByCost(column)
+    case column::Nil => column
     case column::submatrix => {
-      val columnMins = twoMinsByCost(column)
-      val restMins = subSolve(submatrix)
-      // Find possible solutions by joining current column's solutions to the rest of the matrix' solutions
-      // enforcing the condition that two neighbor columns cannot have the same color
-      val solutions = join(columnMins, restMins)((s1, s2) => s1.color != s2.color)
-        .map(x => x._1 merge x._2)
-      
-      // get two most cost-effective solutions
-      twoMinsByCost(solutions)
+      val subSolution = subSolve(submatrix).toStream
+      // for each value in current column, we search for minimum cost in the sub-solution,
+      // then merge those two values
+      column.map(left => left merge minCostDiffColor(subSolution, left.color))
     }
   }
   
-  def join[A](left: Seq[A], right: Seq[A])(p: (A,A) => Boolean): List[(A,A)] = {
-    if (left.isEmpty) scala.List.empty[(A,A)]
-    else {
-      // inner-loops implementation of join
-      
-      val curLeft = left.head
-      val curSeq = right.map(r => (curLeft, r)).filter(x => p(x._1, x._2)).toList
-      curSeq ++ join(left.tail, right)(p)
-    }
-  }
-    
-  def twoMinsByCost[A <: HasCost](as: List[A]): List[A] =
-    twoMins(as)((a1, a2) => a1.cost < a2.cost)
-  
-  def twoMins[A](as: List[A])(lt: (A, A) => Boolean): List[A] =
-    as.foldLeft(Nil:List[A])((acc, a) => {
-      acc match {
-        // insert into sorted list by ascending
-        case min1::min2::_ => {
-          if (lt(a, min1)) List(a, min1) 
-          else if (lt(a, min2)) List(min1, a)
-          else acc
-        }
-        case min::_ => {
-          if (lt(a, min)) List(a, min)
-          else List(min, a)
-        }
-        case Nil => List(a)
-      }
-    })
+  def minCostDiffColor(s: Stream[ColorAndCost], color: Color): ColorAndCost =
+    s.filter(x => x.color != color).minBy(x => x.cost)
     
   def mapWithIndex[A,B](as: List[A])(f: (A, Int) => B): List[B] = {
     as.zipWithIndex.map(x => f(x._1, x._2))

@@ -1,17 +1,50 @@
 package PropTesting
 
+import java.util.concurrent.Executors
+
 case class Gen[A](sample: State[RNG,A]) {
+  def **[B](g: Gen[B]): Gen[(A,B)] =
+    (this map2 g)((_,_))
+  
   def map[B](f: A => B): Gen[B] =
     Gen(sample.map(f))
+    
+  def map2[B,C](b: Gen[B])(f: (A,B) => C): Gen[C] =
+    Gen(sample.map2(b.sample)(f))
     
   def flatMap[B](f: A => Gen[B]): Gen[B] = 
     Gen(sample.flatMap(a => f(a).sample))
     
   def generate(rng: RNG): (A, RNG) =
     sample.run(rng)
+    
+  def unsized: SGen[A] = SGen(_ => this)
+}
+
+case class SGen[A](forSize: Int => Gen[A]) {
+  def flatMap[B](f: A => Gen[B]): SGen[B] =
+    SGen(size => forSize(size).flatMap(f))
+  
+  def map[B](f: A => B): SGen[B] =
+    SGen(size => forSize(size).map(f))
+  
+  def generate(size: Int)(rng: RNG): (A, RNG) =
+    forSize(size).sample.run(rng)
+}
+
+object SGen {
+  def listOf[A](g: Gen[A]): SGen[List[A]] =
+    SGen(size => Gen.listOfN(size, g))
+    
+  def listOf1[A](g: Gen[A]): SGen[List[A]] =
+    SGen(size => Gen.listOfN(size max 1, g))
 }
 
 object Gen {
+  val TP = Gen.weighted(
+    Gen.choose(1, 4).map(Executors.newFixedThreadPool) -> .75,
+    Gen.unit(Executors.newCachedThreadPool()) -> .25)
+  
   def join[A](gg: Gen[Gen[A]]): Gen[A] =
     gg.flatMap(ga => ga)
     
