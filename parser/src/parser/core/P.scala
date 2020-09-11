@@ -43,6 +43,15 @@ case class Parser[+A](run: ParserState => ParseResult) {
 }
 
 class P[A] extends Parsers[ParseError, Parser] {
+  def run[A](p: Parser[A])(input: String): Either[ParseError,A] = {
+    val state = ParserState(input)
+    val result = p.run(state)
+    result match {
+      case ParseSuccess(a: A, _) => Right(a)
+      case pe: ParseError => Left(pe)
+    }
+  }
+  
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = {
     if (n <= 0) Parser(s => ParseSuccess(Nil, s))
     else p.join(listOfN(n - 1, p))
@@ -55,5 +64,20 @@ class P[A] extends Parsers[ParseError, Parser] {
     })
   }
   
+  def string(s: String): Parser[String] = {
+    Parser[String](state => {
+      if (state.text.startsWith(s)) ParseSuccess(s, state.move(s.length))
+      else ParseError(s"Expected string $s")
+    })
+  }
   
+  def or[A](s1: Parser[A], s2: Parser[A]): Parser[A] = {
+    Parser[A](state => {
+      val res1 = s1.run(state)
+      res1 match {
+        case ParseSuccess(_,_) => res1
+        case _ => s2.run(state)
+      }
+    })
+  }
 }
