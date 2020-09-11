@@ -42,7 +42,7 @@ case class Parser[+A](run: ParserState => ParseResult) {
   }
 }
 
-class P[A] extends Parsers[ParseError, Parser] {
+object P extends Parsers[ParseError, Parser] {
   def run[A](p: Parser[A])(input: String): Either[ParseError,A] = {
     val state = ParserState(input)
     val result = p.run(state)
@@ -50,6 +50,31 @@ class P[A] extends Parsers[ParseError, Parser] {
       case ParseSuccess(a: A, _) => Right(a)
       case pe: ParseError => Left(pe)
     }
+  }
+  
+  def oneOrMore[A,B](p: Parser[A])(seed: B)(g: (A, B) => B): Parser[B] = {
+    p.map2(zeroOrMore(p)(seed)(g))(g)
+  }
+  
+  def zeroOrMore[A,B](p: Parser[A])(seed: B)(g: (A, B) => B): Parser[B] = {
+    Parser[B](state => {
+      val res = p.run(state)
+      res match {
+        case ParseSuccess(a: A, nextState) => {
+          val nextParser = zeroOrMore(p)(seed)(g)
+          val nextRes = nextParser.run(nextState)
+          nextRes match {
+            case ParseSuccess(b: B, finalState) => ParseSuccess(g(a, b), finalState)
+            case _ => nextRes
+          }
+        }
+        case _ => ParseSuccess(seed, state)
+      }
+    })
+  }
+  
+  def unit[A](a: A): Parser[A] = {
+    Parser[A](state => ParseSuccess(a, state))
   }
   
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = {
