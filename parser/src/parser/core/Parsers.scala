@@ -9,6 +9,8 @@ trait Parsers[ParseError, Parser[+_]] {	self =>
   
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]]
   
+  def range[A,B](min: Int, max: Option[Int], p: Parser[A])(seed: B)(g: (A, B) => B): Parser[B]
+  
   implicit def char(c: Char): Parser[Char]
   
   implicit def string(s: String): Parser[String]
