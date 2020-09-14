@@ -19,40 +19,49 @@ case class ParseSuccess[+A](a: A, s: ParserState) extends ParseResult {
 }
 
 case class Parser[+A](run: ParserState => ParseResult) {
-  def map[B](f: A => B): Parser[B] = {
-    Parser[B](state => {
+  // TODO: if we use flatMap here there'll be an infinite recursion
+  def map[B](f: A => B): Parser[B] =
+    flatMap(a => P.unit(f(a)))
+  
+  def map2[B,C](p: => Parser[B])(g: (A, B) => C) =
+    P.product(this, p).map(g.tupled)
+  
+  def flatMap[B](f: A => Parser[B]): Parser[B] = 
+    Parser(state => {
       val res = run(state)
       res match {
-        case ParseSuccess(a: A, nextState) => ParseSuccess(f(a), nextState)
+        case ParseSuccess(a: A, nextState) => f(a).run(nextState)
+        case _ => res
+      }
+    })
+  }
+
+object P extends Parsers[ParseError, Parser] {
+  def product[A,B](pa: Parser[A], pb: => Parser[B]): Parser[(A,B)] =
+    pa.flatMap(a => pb.map(b => (a, b)))
+  
+  def slice[A](p: Parser[A]): Parser[String] = {
+    Parser(state => {
+      val res = p.run(state)
+      res match {
+        case ParseSuccess(a, nextState) => {
+          val cLen = state.text.length - nextState.text.length
+          val cText = state.text.substring(0, cLen)
+          ParseSuccess(cText, nextState)
+        }
         case _ => res
       }
     })
   }
   
-  def map2[B,C](p: Parser[B])(g: (A, B) => C) = {
-    Parser(state => {
-      val result = this.run(state)
-      result match {
-        case ParseSuccess(a: A, nextState) => {
-          val nextResult = p.run(nextState)
-          nextResult match {
-            case ParseSuccess(b: B, finalState) => {
-              ParseSuccess(g(a, b), finalState)
-            }
-            case _ => nextResult
-          }
-        }
-        case _ => result
-      }
-    })
+  def many[A](p: Parser[A]): Parser[List[A]] = {
+    p.map2(many(p))(_::_) or unit(Nil)
   }
   
-  def join[B>:A](p: Parser[List[B]]): Parser[List[A]] = {
-    this.map2(p)((a, alist) => a::alist)
+  def many1[A](p: Parser[A]): Parser[List[A]] = {
+    p.map2(many(p))(_::_)
   }
-}
-
-object P extends Parsers[ParseError, Parser] {
+  
   def run[A](p: Parser[A])(input: String): Either[ParseError,A] = {
     val state = ParserState(input)
     val result = p.run(state)
@@ -62,50 +71,21 @@ object P extends Parsers[ParseError, Parser] {
     }
   }
   
-  def range[A,B](min: Int, take: Option[Int], p: Parser[A])(seed: B)(g: (A, B) => B): Parser[B] = {
-    if (min > 0) {
-      val nextP = range(min - 1, take.map(_ - 1), p)(seed)(g)
-      p.map2(nextP)(g)
-    }
-    else {
-      // check if we hit the maximum number of occurences
-      val noMore = take.map(_ <= 0).getOrElse(false)
-      if (noMore) unit(seed)
-      else {
-        Parser[B](state => {
-          val res = p.run(state)
-          res match {
-            case ParseSuccess(a: A, nextState) => {
-              val nextParser = range(min, take.map(_ - 1), p)(seed)(g)
-              val nextRes = nextParser.run(nextState)
-              nextRes match {
-                case ParseSuccess(b: B, finalState) => ParseSuccess(g(a, b), finalState)
-                case _ => nextRes
-              }
-            }
-            // parseerror is actually a success here, because we expect 
-            // _zero_ or more occurences, and this case covers _zero_
-            case _ => ParseSuccess(seed, state)
-          }
-        })
-      }
-    }
-  }
+  def digit(): Parser[Int] = 
+    charRange('0', '9').map(chr => (chr - '0'))
   
-  def oneOrMore[A,B](p: Parser[A])(seed: B)(g: (A, B) => B): Parser[B] = {
-    range(1, None, p)(seed)(g)
-  }
-  
-  def zeroOrMore[A,B](p: Parser[A])(seed: B)(g: (A, B) => B): Parser[B] = {
-    range(0, None, p)(seed)(g)
+  def charRange(min: Char, max: Char): Parser[Char] = {
+    val charsP = (min.toInt to max.toInt).map(codepoint => char(codepoint.toChar))
+    charsP.tail.foldLeft(charsP.head)((p, acc) => p.or(acc))
   }
   
   def unit[A](a: A): Parser[A] = {
-    string("").map(_ => a)
+    Parser[A](state => ParseSuccess(a, state))
   }
   
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = {
-    range(n, Some(n), p)(Nil:List[A])(_::_)
+    if (n == 0) unit(Nil)
+    else p.map2(listOfN(n - 1, p))(_::_)
   }
 
   def char(c: Char): Parser[Char] = {
@@ -119,7 +99,7 @@ object P extends Parsers[ParseError, Parser] {
     })
   }
   
-  def or[A](s1: Parser[A], s2: Parser[A]): Parser[A] = {
+  def or[A](s1: Parser[A], s2: => Parser[A]): Parser[A] = {
     Parser[A](state => {
       val res1 = s1.run(state)
       res1 match {

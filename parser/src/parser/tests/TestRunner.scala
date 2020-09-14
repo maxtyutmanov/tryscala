@@ -7,6 +7,12 @@ object TestRunner {
   def main(args: Array[String]) = {
     runMapLaw
     runUnitLaw
+    runSliceEntireStrLaw
+  }
+  
+  def runSliceEntireStrLaw: Unit = {
+    val prop = Laws.sliceEntireStrLaw()
+    PropTesting.run(prop)
   }
   
   def runMapLaw(): Unit = {

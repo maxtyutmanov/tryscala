@@ -1,17 +1,26 @@
 package parser.runner
 
 import parser.core.P._;
+import parser.core._;
 
 object Program {
   def main(args: Array[String]): Unit = {
     val multipleAbcOrDef = listOfN(3, string("abc") | string("def"))
     println(run(multipleAbcOrDef)("abcdefabc"))
-    println(run(oneOrMore(string("abc") | string("def"))(0)((a, b) => b + 1))("abcdefabc"))
+    //println(run(string("abc") | string("def"))("abc"))
+    //println(run(many1(string("abc") | string("def")))("abcdefabc"))
     
-    val p = zeroOrMore(char('a'))(0)((a, cnt) => cnt + 1)
-      .map2(oneOrMore(char('b'))(0)((a, cnt) => cnt + 1))((_, _))
-      
-    println(run(p)("bbb"))
-    println(run(p)("aaab"))
+    val p = string("abc").flatMap(s => string("def").map(x => x.length))
+    println(run(p)("abcdef"))
+    
+    testContextSensitive()
+  }
+  
+  def testContextSensitive(): Unit = {
+    // digit followed by that many 'a' characters that it denotes
+    val p = digit.flatMap(d => listOfN(d, char('a')))
+    println(run(p)("4aaa"))
+    println(run(p)("3aaa"))
+    println(run(p)("aaa"))
   }
 }
